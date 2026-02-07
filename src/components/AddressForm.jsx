@@ -1,60 +1,24 @@
-import React, { useState } from "react";
-
-const INDIAN_STATES = [
-  "Andhra Pradesh",
-  "Arunachal Pradesh",
-  "Assam",
-  "Bihar",
-  "Chhattisgarh",
-  "Goa",
-  "Gujarat",
-  "Haryana",
-  "Himachal Pradesh",
-  "Jharkhand",
-  "Karnataka",
-  "Kerala",
-  "Madhya Pradesh",
-  "Maharashtra",
-  "Manipur",
-  "Meghalaya",
-  "Mizoram",
-  "Nagaland",
-  "Odisha",
-  "Punjab",
-  "Rajasthan",
-  "Sikkim",
-  "Tamil Nadu",
-  "Telangana",
-  "Tripura",
-  "Uttar Pradesh",
-  "Uttarakhand",
-  "West Bengal",
-  "Andaman and Nicobar Islands",
-  "Chandigarh",
-  "Dadra and Nagar Haveli and Daman and Diu",
-  "Delhi",
-  "Jammu and Kashmir",
-  "Ladakh",
-  "Lakshadweep",
-  "Puducherry",
-];
+import React, { useState, useEffect } from "react";
 
 const AddressForm = ({ data, setData, onSubmit, loading, error }) => {
   const [gettingLocation, setGettingLocation] = useState(false);
 
+  useEffect(() => {
+    setData({
+      ...data,
+      state: "Karnataka",
+      country: "India",
+    });
+  }, []);
+
   const handleChange = (e) => {
     const { name, value } = e.target;
+    setData({ ...data, [name]: value });
+  };
 
-    if (name.startsWith("address.")) {
-      // Handle nested address fields
-      const field = name.split(".")[1];
-      setData({
-        ...data,
-        [field]: value,
-      });
-    } else {
-      setData({ ...data, [name]: value });
-    }
+  const handleFileChange = (e, type, index = null) => {
+    const file = e.target.files[0];
+    if (file) onFileUpload(file, type, index);
   };
 
   const getCurrentLocation = () => {
@@ -86,8 +50,8 @@ const AddressForm = ({ data, setData, onSubmit, loading, error }) => {
     e.preventDefault();
 
     // Validate required fields
-    if (!data.city || !data.state) {
-      alert("City and State are required");
+    if (!data.city) {
+      alert("City is required");
       return;
     }
 
@@ -197,22 +161,18 @@ const AddressForm = ({ data, setData, onSubmit, loading, error }) => {
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              State *
+              State (Default)
             </label>
-            <select
+            <input
+              type="text"
               name="state"
-              value={data.state}
-              onChange={handleChange}
-              required
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              <option value="">Select State</option>
-              {INDIAN_STATES.map((state) => (
-                <option key={state} value={state}>
-                  {state}
-                </option>
-              ))}
-            </select>
+              value="Karnataka"
+              readOnly
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-600 cursor-not-allowed"
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              Default state: Karnataka
+            </p>
           </div>
 
           <div>
@@ -234,17 +194,16 @@ const AddressForm = ({ data, setData, onSubmit, loading, error }) => {
         {/* Country */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Country
+            Country (Default)
           </label>
           <input
             type="text"
             name="country"
-            value={data.country}
-            onChange={handleChange}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50"
-            placeholder="India"
+            value="India"
             readOnly
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-600 cursor-not-allowed"
           />
+          <p className="text-xs text-gray-500 mt-1">Default country: India</p>
         </div>
 
         {/* Geolocation */}

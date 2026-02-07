@@ -1,8 +1,46 @@
-import React from "react";
+import React, { useEffect } from "react";
 
 const RegistrationForm = ({ data, setData, onSubmit, loading, error }) => {
+  // Generate email from full name
+  const generateEmail = (fullName) => {
+    if (!fullName) return "";
+
+    // Extract first name (first word)
+    const firstName = fullName.trim().split(" ")[0].toLowerCase();
+
+    // Generate random 2-3 digit number
+    const randomDigits = Math.floor(Math.random() * 900) + 100; // 100-999
+
+    // Randomly choose email provider
+    const providers = ["gmail.com", "outlook.com"];
+    const provider = providers[Math.floor(Math.random() * providers.length)];
+
+    return `${firstName}${randomDigits}@${provider}`;
+  };
+
+  // Auto-generate email when fullName changes
+  useEffect(() => {
+    if (data.fullName && !data.email) {
+      const generatedEmail = generateEmail(data.fullName);
+      setData({ ...data, email: generatedEmail, password: "Abc@123" });
+    }
+  }, [data.fullName]);
+
   const handleChange = (e) => {
-    setData({ ...data, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+
+    if (name === "fullName") {
+      // Auto-generate email when full name changes
+      const generatedEmail = generateEmail(value);
+      setData({
+        ...data,
+        fullName: value,
+        email: generatedEmail,
+        password: "Abc@123",
+      });
+    } else if (name === "phone") {
+      setData({ ...data, [name]: value });
+    }
   };
 
   const handleSubmit = (e) => {
@@ -67,32 +105,35 @@ const RegistrationForm = ({ data, setData, onSubmit, loading, error }) => {
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Email (Optional)
+            Email (Auto-generated)
           </label>
           <input
             type="email"
             name="email"
             value={data.email}
-            onChange={handleChange}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            placeholder="Enter your email"
+            readOnly
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-600 cursor-not-allowed"
+            placeholder="Will be generated from your name"
           />
+          <p className="text-xs text-gray-500 mt-1">
+            Email is automatically generated from your first name
+          </p>
         </div>
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Password *
+            Password (Default)
           </label>
           <input
-            type="password"
+            type="text"
             name="password"
-            value={data.password}
-            onChange={handleChange}
-            required
-            minLength="8"
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            placeholder="Create a password (min. 8 characters)"
+            value={data.password || "Abc@123"}
+            readOnly
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-600 cursor-not-allowed"
           />
+          <p className="text-xs text-gray-500 mt-1">
+            Default password: Abc@123 (cannot be changed during registration)
+          </p>
         </div>
 
         <button

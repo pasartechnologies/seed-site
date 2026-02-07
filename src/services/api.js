@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || "http://localhost:3000/api";
+  import.meta.env.VITE_API_BASE_URL || "http://192.168.1.25:3000/api";
 
 class ApiService {
   constructor() {
@@ -76,6 +76,25 @@ class ApiService {
 
   async getCurrentUser() {
     const response = await this.api.get("/user");
+    return response.data;
+  }
+
+  // Ad endpoints - Supports both adlisting and stockad
+  async createAd(adType, adData) {
+    const response = await this.api.post(`/ads/${adType}`, adData);
+    return response.data;
+  }
+
+  async getAdPlans(adType, adId) {
+    const response = await this.api.get(`/ads/${adType}/${adId}/plans`);
+    return response.data;
+  }
+
+  async applyAdPlans(adType, adId, plansData) {
+    const response = await this.api.patch(
+      `/ads/${adType}/${adId}/plans`,
+      plansData,
+    );
     return response.data;
   }
 }

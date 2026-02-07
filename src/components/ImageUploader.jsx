@@ -1,5 +1,7 @@
 import React, { useState, useRef } from "react";
 import axios from "axios";
+import ReactCrop from "react-image-crop";
+import "react-image-crop/dist/ReactCrop.css";
 
 const ImageUploader = ({
   currentImage,
@@ -12,7 +14,18 @@ const ImageUploader = ({
   const [uploadProgress, setUploadProgress] = useState(0);
   const [preview, setPreview] = useState(currentImage || "");
   const [error, setError] = useState(null);
+
+  // Cropper states
+  const [selectedImage, setSelectedImage] = useState(null);
+  const [crop, setCrop] = useState({
+    unit: "%",
+    width: 80,
+    aspect: 1,
+  });
+  const [completedCrop, setCompletedCrop] = useState(null);
+
   const fileInputRef = useRef(null);
+  const imgRef = useRef(null);
 
   const getCloudinarySignature = async (folder) => {
     try {
@@ -62,7 +75,38 @@ const ImageUploader = ({
     }
   };
 
-  const handleFileSelect = async (event) => {
+  const getCroppedImg = (image, crop) => {
+    const canvas = document.createElement("canvas");
+    const scaleX = image.naturalWidth / image.width;
+    const scaleY = image.naturalHeight / image.height;
+    canvas.width = crop.width;
+    canvas.height = crop.height;
+    const ctx = canvas.getContext("2d");
+
+    ctx.drawImage(
+      image,
+      crop.x * scaleX,
+      crop.y * scaleY,
+      crop.width * scaleX,
+      crop.height * scaleY,
+      0,
+      0,
+      crop.width,
+      crop.height,
+    );
+
+    return new Promise((resolve) => {
+      canvas.toBlob(
+        (blob) => {
+          resolve(blob);
+        },
+        "image/jpeg",
+        0.95,
+      );
+    });
+  };
+
+  const handleFileSelect = (event) => {
     const file = event.target.files[0];
     if (!file) return;
 
@@ -79,22 +123,34 @@ const ImageUploader = ({
     }
 
     setError(null);
+
+    // Load image for cropping - automatically opens cropper
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setSelectedImage(reader.result);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleCropComplete = async () => {
+    if (!completedCrop || !imgRef.current) return;
+
     setUploading(true);
     setUploadProgress(0);
 
-    // Create preview
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setPreview(reader.result);
-    };
-    reader.readAsDataURL(file);
-
     try {
+      // Get cropped image blob
+      const croppedBlob = await getCroppedImg(imgRef.current, completedCrop);
+
+      // Create preview
+      const previewUrl = URL.createObjectURL(croppedBlob);
+      setPreview(previewUrl);
+
       // Step 1: Get signature from backend
       const signatureData = await getCloudinarySignature(folder);
 
       // Step 2: Upload to Cloudinary
-      const secureUrl = await uploadToCloudinary(file, signatureData);
+      const secureUrl = await uploadToCloudinary(croppedBlob, signatureData);
 
       // Step 3: Call parent callback with the secure URL
       if (onImageUpload) {
@@ -103,13 +159,22 @@ const ImageUploader = ({
 
       setPreview(secureUrl);
       setUploadProgress(100);
+      setSelectedImage(null);
+      setCompletedCrop(null);
     } catch (err) {
       setError(err.message);
       setPreview(currentImage || "");
     } finally {
       setUploading(false);
-      // Reset progress after a delay
       setTimeout(() => setUploadProgress(0), 1000);
+    }
+  };
+
+  const handleCancelCrop = () => {
+    setSelectedImage(null);
+    setCompletedCrop(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
     }
   };
 
@@ -131,6 +196,152 @@ const ImageUploader = ({
 
   return (
     <div className={`space-y-3 ${className}`}>
+      {/* Cropper Modal - Automatically opens when image is selected */}
+      {selectedImage && (
+        <div className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg p-6 max-w-4xl w-full max-h-[95vh] overflow-auto">
+            <h3 className="text-2xl font-bold mb-2 text-gray-800">
+              Crop Your Profile Picture
+            </h3>
+            <p className="text-sm text-gray-600 mb-4">
+              Drag to adjust the square crop area. Your photo will be displayed
+              as a circle.
+            </p>
+
+            <div className="relative mb-6 flex justify-center">
+              <div className="relative inline-block">
+                <ReactCrop
+                  crop={crop}
+                  onChange={(c) => setCrop(c)}
+                  onComplete={(c) => setCompletedCrop(c)}
+                  aspect={1}
+                  circularCrop={false}
+                >
+                  <img
+                    ref={imgRef}
+                    src={selectedImage}
+                    alt="Crop preview"
+                    className="max-w-full max-h-[55vh]"
+                    style={{ display: "block" }}
+                  />
+                </ReactCrop>
+
+                {/* Circular Overlay Effect */}
+                {completedCrop && imgRef.current && (
+                  <svg
+                    className="absolute top-0 left-0 pointer-events-none"
+                    style={{
+                      width: imgRef.current.width,
+                      height: imgRef.current.height,
+                    }}
+                  >
+                    <defs>
+                      <mask id="circleMask">
+                        <rect width="100%" height="100%" fill="white" />
+                        <circle
+                          cx={completedCrop.x + completedCrop.width / 2}
+                          cy={completedCrop.y + completedCrop.height / 2}
+                          r={completedCrop.width / 2}
+                          fill="black"
+                        />
+                      </mask>
+                    </defs>
+                    <rect
+                      width="100%"
+                      height="100%"
+                      fill="rgba(0, 0, 0, 0.6)"
+                      mask="url(#circleMask)"
+                    />
+                    <circle
+                      cx={completedCrop.x + completedCrop.width / 2}
+                      cy={completedCrop.y + completedCrop.height / 2}
+                      r={completedCrop.width / 2}
+                      fill="none"
+                      stroke="#3B82F6"
+                      strokeWidth="3"
+                      strokeDasharray="8 4"
+                    />
+                  </svg>
+                )}
+              </div>
+            </div>
+
+            {/* Preview */}
+            {completedCrop && imgRef.current && (
+              <div className="mb-6 flex flex-col items-center">
+                <p className="text-sm font-medium text-gray-700 mb-2">
+                  Preview:
+                </p>
+                <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-blue-500 shadow-lg bg-gray-100">
+                  <div
+                    style={{
+                      width: completedCrop.width,
+                      height: completedCrop.height,
+                      transform: `scale(${96 / completedCrop.width})`,
+                      transformOrigin: "0 0",
+                    }}
+                  >
+                    <img
+                      src={selectedImage}
+                      alt="Preview"
+                      style={{
+                        transform: `translate(${-completedCrop.x}px, ${-completedCrop.y}px)`,
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="flex space-x-3">
+              <button
+                type="button"
+                onClick={handleCropComplete}
+                disabled={uploading || !completedCrop}
+                className="flex-1 bg-blue-600 text-white py-3 px-4 rounded-lg font-semibold hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition"
+              >
+                {uploading ? (
+                  <span className="flex items-center justify-center">
+                    <svg
+                      className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      ></circle>
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      ></path>
+                    </svg>
+                    Uploading...
+                  </span>
+                ) : (
+                  "Crop & Upload"
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={handleCancelCrop}
+                disabled={uploading}
+                className="flex-1 bg-gray-300 text-gray-700 py-3 px-4 rounded-lg font-semibold hover:bg-gray-400 disabled:opacity-50 transition"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Main Upload UI */}
       <div className="flex items-center space-x-4">
         {/* Image Preview */}
         <div className="relative">

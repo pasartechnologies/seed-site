@@ -51,7 +51,7 @@ const OTPVerificationForm = ({
         console.log("Calling onSubmit with OTP:", data.otp);
         onSubmit();
         // Reset auto-verifying after a short delay
-        setTimeout(() => setAutoVerifying(false), 500);
+        setTimeout(() => setAutoVerifying(false), 300);
       }, DEV_CONFIG.AUTO_VERIFY_DELAY);
     }
 
@@ -127,7 +127,7 @@ const OTPVerificationForm = ({
       setCanResend(false);
       setCountdown(60);
       setData({ ...data, otp: "" });
-      hasAutoFilled.current = false; // Reset auto-fill flag for new OTP
+      hasAutoFilled.current = false;
       await onResend();
     }
   };

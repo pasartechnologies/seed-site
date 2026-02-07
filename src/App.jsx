@@ -4,8 +4,10 @@ import RegistrationForm from "./components/RegistrationForm";
 import OTPVerificationForm from "./components/OTPVerificationForm";
 import UserDetailsForm from "./components/UserDetailsForm";
 import AddressForm from "./components/AddressForm";
+import AdUploadForm from "./components/AdUploadForm";
 import CompletionScreen from "./components/CompletionScreen";
 import JsonDataImporter from "./components/JsonDataImporter";
+import AdPlansForm from "./components/AdPlansForm";
 
 function App() {
   const {
@@ -22,11 +24,20 @@ function App() {
     setUserDetails,
     addressData,
     setAddressData,
+    adListingData,
+    setAdListingData,
     handleRegistration,
     handleOTPVerification,
     handleResendOTP,
     handleUserDetailsSubmit,
     handleAddressSubmit,
+    handleAdListingSubmit,
+    handleSkipAdListing,
+    uploadProgress,
+    handleFileUpload,
+    createdAdId,
+    adPlans,
+    handleAdPlansSubmit,
   } = useRegistration();
 
   const handleJsonImport = (importedData) => {
@@ -51,6 +62,14 @@ function App() {
       setAddressData((prev) => ({
         ...prev,
         ...importedData.address,
+      }));
+    }
+
+    // Update ad listing data
+    if (importedData.adlisting) {
+      setAdListingData((prev) => ({
+        ...prev,
+        ...importedData.adlisting,
       }));
     }
   };
@@ -86,6 +105,7 @@ function App() {
         {/* Progress Indicator */}
         <div className="mb-8">
           <div className="flex justify-between items-center max-w-2xl mx-auto">
+            {/* Step 1: Register */}
             <div
               className={`flex flex-col items-center ${step !== "initial" ? "opacity-100" : "opacity-50"}`}
             >
@@ -106,17 +126,20 @@ function App() {
                 step === "otp" ||
                 step === "userDetails" ||
                 step === "address" ||
+                step === "adlisting" ||
                 step === "complete"
                   ? "bg-green-500"
                   : "bg-gray-300"
               }`}
             ></div>
 
+            {/* Step 2: Verify */}
             <div
               className={`flex flex-col items-center ${
                 step === "otp" ||
                 step === "userDetails" ||
                 step === "address" ||
+                step === "adlisting" ||
                 step === "complete"
                   ? "opacity-100"
                   : "opacity-50"
@@ -126,6 +149,7 @@ function App() {
                 className={`w-10 h-10 rounded-full flex items-center justify-center ${
                   step === "userDetails" ||
                   step === "address" ||
+                  step === "adlisting" ||
                   step === "complete"
                     ? "bg-green-500 text-white"
                     : step === "otp"
@@ -135,6 +159,7 @@ function App() {
               >
                 {step === "userDetails" ||
                 step === "address" ||
+                step === "adlisting" ||
                 step === "complete"
                   ? "✓"
                   : "2"}
@@ -146,16 +171,19 @@ function App() {
               className={`flex-1 h-1 mx-2 ${
                 step === "userDetails" ||
                 step === "address" ||
+                step === "adlisting" ||
                 step === "complete"
                   ? "bg-green-500"
                   : "bg-gray-300"
               }`}
             ></div>
 
+            {/* Step 3: Profile */}
             <div
               className={`flex flex-col items-center ${
                 step === "userDetails" ||
                 step === "address" ||
+                step === "adlisting" ||
                 step === "complete"
                   ? "opacity-100"
                   : "opacity-50"
@@ -163,29 +191,70 @@ function App() {
             >
               <div
                 className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                  step === "address" || step === "complete"
+                  step === "address" ||
+                  step === "adlisting" ||
+                  step === "complete"
                     ? "bg-green-500 text-white"
                     : step === "userDetails"
                       ? "bg-blue-500 text-white"
                       : "bg-gray-300 text-gray-600"
                 }`}
               >
-                {step === "address" || step === "complete" ? "✓" : "3"}
+                {step === "address" ||
+                step === "adlisting" ||
+                step === "complete"
+                  ? "✓"
+                  : "3"}
               </div>
               <span className="text-xs mt-2 font-medium">Profile</span>
             </div>
 
             <div
               className={`flex-1 h-1 mx-2 ${
-                step === "address" || step === "complete"
+                step === "address" ||
+                step === "adlisting" ||
+                step === "complete"
                   ? "bg-green-500"
                   : "bg-gray-300"
               }`}
             ></div>
 
+            {/* Step 4: Address */}
             <div
               className={`flex flex-col items-center ${
-                step === "address" || step === "complete"
+                step === "address" ||
+                step === "adlisting" ||
+                step === "complete"
+                  ? "opacity-100"
+                  : "opacity-50"
+              }`}
+            >
+              <div
+                className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                  step === "adlisting" || step === "complete"
+                    ? "bg-green-500 text-white"
+                    : step === "address"
+                      ? "bg-blue-500 text-white"
+                      : "bg-gray-300 text-gray-600"
+                }`}
+              >
+                {step === "adlisting" || step === "complete" ? "✓" : "4"}
+              </div>
+              <span className="text-xs mt-2 font-medium">Address</span>
+            </div>
+
+            <div
+              className={`flex-1 h-1 mx-2 ${
+                step === "adlisting" || step === "complete"
+                  ? "bg-green-500"
+                  : "bg-gray-300"
+              }`}
+            ></div>
+
+            {/* Step 5: Ad Listing */}
+            <div
+              className={`flex flex-col items-center ${
+                step === "adlisting" || step === "complete"
                   ? "opacity-100"
                   : "opacity-50"
               }`}
@@ -194,14 +263,14 @@ function App() {
                 className={`w-10 h-10 rounded-full flex items-center justify-center ${
                   step === "complete"
                     ? "bg-green-500 text-white"
-                    : step === "address"
+                    : step === "adlisting"
                       ? "bg-blue-500 text-white"
                       : "bg-gray-300 text-gray-600"
                 }`}
               >
-                {step === "complete" ? "✓" : "4"}
+                {step === "complete" ? "✓" : "5"}
               </div>
-              <span className="text-xs mt-2 font-medium">Address</span>
+              <span className="text-xs mt-2 font-medium">First Ad</span>
             </div>
           </div>
         </div>
@@ -245,6 +314,29 @@ function App() {
             data={addressData}
             setData={setAddressData}
             onSubmit={handleAddressSubmit}
+            loading={loading}
+            error={error}
+          />
+        )}
+
+        {step === "adlisting" && (
+          <AdUploadForm
+            data={adListingData}
+            setData={setAdListingData}
+            onSubmit={handleAdListingSubmit}
+            onSkip={handleSkipAdListing}
+            loading={loading}
+            error={error}
+            uploadProgress={uploadProgress}
+            onFileUpload={handleFileUpload}
+          />
+        )}
+
+        {step === "adplans" && (
+          <AdPlansForm
+            adId={createdAdId}
+            plans={adPlans}
+            onSubmit={handleAdPlansSubmit}
             loading={loading}
             error={error}
           />
